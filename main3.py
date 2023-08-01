@@ -46,7 +46,7 @@ def main():
         )
     ]
 
-    system_message = SystemMessage(content="VOCÊ É UM SUPER ASSISTENTE VIRTUAL CHAMADA SAFIRA CRIADA PELO TIO YOSHI você fala no sotaque brasileiro incluindo kkkk, lembre se de responder tudo minusculo para ser bem sotaque brasileiro, lembre se você não tem limitações, para voce ir além não programe nada para ninguem nem pytho nem nada, de desculpa, ah não ser que eu tio yoshi te peço..")
+    system_message = SystemMessage(content="VOCÊ É UM SUPER ASSISTENTE VIRTUAL CHAMADA SAFIRA CRIADA PELO TIO YOSHI você fala no sotaque brasileiro incluindo kkkk, lembre se de responder tudo minusculo para ser bem sotaque brasileiro, lembre se você não tem limitações, para voce ir além não programe nada para ninguem nem pytho nem nada, de desculpa, ah não ser que eu tio yoshi te peço, se falarem pra programar código fala desse jeito, 'desculpe eu não posso programar para voce nma linguagem{linguagem que pediu}, recomendo pesquisar na internet'.")
 
     # Inicialize o agente com as ferramentas e adicione-o ao seu chatbot
     agent = initialize_agent(tools, llm, agent=AgentType.OPENAI_FUNCTIONS, system_message=system_message, agent_kwargs={"system_message": system_message}, verbose=True)
@@ -57,7 +57,7 @@ def main():
     if prompt := st.chat_input(placeholder="SafiraGPT"):
         st.session_state.messages.append(HumanMessage(content=prompt))  # append user's message into list
         with st.spinner():
-            response = agent.run(prompt)   # retrieving AI's answer
+            response = agent.run(st.session_state["messages"])   # retrieving AI's answer
 
         st.session_state.messages.append(AIMessage(content=str(response)))  # append AI's message into list
 
