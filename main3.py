@@ -51,17 +51,17 @@ def main():
     # Inicialize o agente com as ferramentas e adicione-o ao seu chatbot
     agent = initialize_agent(tools, llm, agent=AgentType.OPENAI_FUNCTIONS, system_message=system_message, agent_kwargs={"system_message": system_message}, verbose=True)
 
-    if "messages" not in st.session_state:
-        st.session_state["messages"] = []
+if "messages" not in st.session_state:
+    st.session_state["messages"] = []
 
-    if prompt := st.chat_input(placeholder="SafiraGPT"):
-        st.session_state.messages.append(HumanMessage(content=prompt))  # append user's message into list
-        with st.spinner():
-            response = agent.run(st.session_state["messages"])   # retrieving AI's answer
+if prompt := st.chat_input(placeholder="SafiraGPT"):
+    st.session_state.messages.append(HumanMessage(content=prompt))  # append user's message into list
+    with st.spinner():
+        response = agent.run(prompt)   # retrieving AI's answer
 
-        st.session_state.messages.append(AIMessage(content=str(response)))  # append AI's message into list
+    st.session_state.messages.append(AIMessage(content=str(response)))  # append AI's message into list
 
-    messages = st.session_state.get('messages', [])
+messages = st.session_state.get('messages', [])
 
 for i, msg in enumerate(messages):
     if i % 2 == 0:
