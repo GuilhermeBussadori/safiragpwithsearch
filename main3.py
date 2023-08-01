@@ -63,11 +63,11 @@ def main():
 
     messages = st.session_state.get('messages', [])
 
-    for i, msg in enumerate(messages):
-        if i % 2 == 0:
-            message(msg.content, is_user=True)
-        else:
-            message(msg.content, is_user=False)
+for i, msg in enumerate(messages):
+    if i % 2 == 0:
+        message(msg.content, is_user=True, key=f"user_message_{i}")
+    else:
+        message(msg.content, is_user=False, key=f"bot_message_{i}")
 
 if __name__ == '__main__':
     main()
