@@ -25,7 +25,7 @@ def main():
         st.stop()
 
     # Crie uma instância do chatbot com o modelo desejado
-    llm = ChatOpenAI(temperature=1, model="gpt-3.5-turbo-0613", openai_api_key=openai_api_key)
+    llm = ChatOpenAI(temperature=1, model="gpt-4", openai_api_key=openai_api_key)
 
     # Crie uma instância do wrapper SerpAPI
     search = SerpAPIWrapper(serpapi_api_key="bfaafdbff929b7fa0ca3eb10ff1287b2c977f7a75725c23fe4f5286eebc5ba46")
