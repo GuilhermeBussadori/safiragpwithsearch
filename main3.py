@@ -149,10 +149,10 @@ def main():
         st.image(image, caption='Uploaded Image.', use_column_width=True)
 
         # Image caption
-        caption_response = agent.run("ImageCaption", image=image)
+        caption_response = agent.run(tool="ImageCaption", image=image)
 
         # Object detection
-        detection_response = agent.run("ObjectDetection", image=image)
+        detection_response = agent.run(tool="ObjectDetection", image=image)
 
         st.write('Caption:', caption_response)
         st.write('Detected objects:', detection_response)
