@@ -141,7 +141,7 @@ def main():
             message(msg.content, is_user=True)
         else:
             message(msg.content, is_user=False)
-
+            
     uploaded_file = st.file_uploader("Choose an image...", type="jpg")
 
     if uploaded_file is not None:
@@ -149,10 +149,10 @@ def main():
         st.image(image, caption='Uploaded Image.', use_column_width=True)
 
         # Image caption
-        caption_response = agent.run(tool="ImageCaption", image=image)
+        caption_response = agent.run(tool="ImageCaption", input={"image": image})
 
         # Object detection
-        detection_response = agent.run(tool="ObjectDetection", image=image)
+        detection_response = agent.run(tool="ObjectDetection", input={"image": image})
 
         st.write('Caption:', caption_response)
         st.write('Detected objects:', detection_response)
