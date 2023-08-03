@@ -148,12 +148,10 @@ def main():
     if uploaded_file is not None:
         image = Image.open(uploaded_file)
         st.image(image, caption='Uploaded Image.', use_column_width=True)
+        caption_response = agent.run(tool="ImageCaption", image=image)
 
-        # Image caption
-        caption_response = agent.run(tool="ImageCaption", input={"image": image})
-
-        # Object detection
-        detection_response = agent.run(tool="ObjectDetection", input={"image": image})
+# Object detection
+        detection_response = agent.run(tool="ObjectDetection", image=image)
 
         st.write('Caption:', caption_response)
         st.write('Detected objects:', detection_response)
