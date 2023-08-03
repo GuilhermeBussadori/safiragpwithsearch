@@ -7,61 +7,36 @@ from langchain.chat_models import ChatOpenAI
 from langchain.schema import SystemMessage, HumanMessage, AIMessage
 from langchain.callbacks import StreamlitCallbackHandler
 import requests
-from transformers import Blip2Processor, BlipForConditionalGeneration, DetrImageProcessor, DetrForObjectDetection
+import json
+import base64
 from PIL import Image
-import torch
-from tempfile import NamedTemporaryFile
-from io import BytesIO
 
-def generate_image(description, openai_api_key):
-    headers = {
-        'Content-Type': 'application/json',
-        'Authorization': f'Bearer {openai_api_key}'
+def asticaAPI(endpoint, payload, timeout):
+    response = requests.post(endpoint, data=json.dumps(payload), timeout=timeout, headers={ 'Content-Type': 'application/json', })
+    if response.status_code == 200:
+        return response.json()
+    else:
+        return {'status': 'error', 'error': 'Failed to connect to the API.'}
+
+def analyze_image(asticaAPI_key, image_url):
+    asticaAPI_timeout = 200 # seconds  Using "gpt" or "gpt_detailed" will increase response time.
+    asticaAPI_endpoint = 'https://vision.astica.ai/describe'
+    asticaAPI_modelVersion = '2.1_full' # '1.0_full', '2.0_full', or '2.1_full'
+    asticaAPI_input = image_url
+    asticaAPI_visionParams = 'gpt,description,objects,faces' # comma separated options; leave blank for all; note "gpt" and "gpt_detailed" are slow.
+
+    # Define payload dictionary
+    asticaAPI_payload = {
+        'tkn': asticaAPI_key,
+        'modelVersion': asticaAPI_modelVersion,
+        'visionParams': asticaAPI_visionParams,
+        'input': asticaAPI_input,
     }
 
-    data = {
-        "prompts": [description],
-        "max_tokens": 512
-    }
+    # Call API function and store result
+    asticaAPI_result = asticaAPI(asticaAPI_endpoint, asticaAPI_payload, asticaAPI_timeout)
 
-    response = requests.post('https://api.openai.com/v1/images/generations', headers=headers, json=data)
-    image_url = response.json()['image']['url']
-
-    return image_url
-
-def get_image_caption(image):
-    model_name = "Salesforce/blip-image-captioning-large"
-    device = "cpu"  # cuda
-
-    processor = Blip2Processor.from_pretrained(model_name)
-    model = BlipForConditionalGeneration.from_pretrained(model_name).to(device)
-
-    inputs = processor(image, return_tensors='pt').to(device)
-    output = model.generate(**inputs, max_new_tokens=20)
-
-    caption = processor.decode(output[0], skip_special_tokens=True)
-
-    return caption
-
-def detect_objects(image):
-    processor = DetrImageProcessor.from_pretrained("facebook/detr-resnet-50")
-    model = DetrForObjectDetection.from_pretrained("facebook/detr-resnet-50")
-
-    inputs = processor(images=image, return_tensors="pt")
-    outputs = model(**inputs)
-
-    # convert outputs (bounding boxes and class logits) to COCO API
-    # let's only keep detections with score > 0.9
-    target_sizes = torch.tensor([image.size[::-1]])
-    results = processor.post_process_object_detection(outputs, target_sizes=target_sizes, threshold=0.9)[0]
-
-    detections = ""
-    for score, label, box in zip(results["scores"], results["labels"], results["boxes"]):
-        detections += '[{}, {}, {}, {}]'.format(int(box[0]), int(box[1]), int(box[2]), int(box[3]))
-        detections += ' {}'.format(model.config.id2label[int(label)])
-        detections += ' {}\n'.format(float(score))
-
-    return detections
+    return asticaAPI_result
 
 def init():
     st.set_page_config(
@@ -71,19 +46,18 @@ def init():
 
     st.header('SafiraGPT 🤖')
 
-# ... código anterior ...
-
 def main():
     init()
 
     openai_api_key = st.sidebar.text_input("OpenAI API Key", type="password")
+    asticaAPI_key = st.sidebar.text_input("Astica API Key", type="password")
 
-    if not openai_api_key:
-        st.info("Por favor, insira sua chave API da OpenAI para continuar.")
+    if not openai_api_key or not asticaAPI_key:
+        st.info("Por favor, insira suas chaves API da OpenAI e Astica para continuar.")
         st.stop()
 
     # Crie uma instância do chatbot com o modelo desejado
-    llm = ChatOpenAI(temperature=1, model="gpt-3.5-turbo-0613", openai_api_key=openai_api_key)
+    llm = ChatOpenAI(temperature=1, model="gpt-4", openai_api_key=openai_api_key)
 
     # Crie uma instância do wrapper SerpAPI
     search = SerpAPIWrapper(serpapi_api_key="bfaafdbff929b7fa0ca3eb10ff1287b2c977f7a75725c23fe4f5286eebc5ba46")
@@ -103,19 +77,9 @@ def main():
             description="useful for when you need to answer questions about math"
         ),
         Tool(
-            name = "ImageCaption",
-            func=lambda image_path: get_image_caption(image_path),
-            description="useful for when you need to generate a caption for an image"
-        ),
-        Tool(
-            name = "ObjectDetection",
-            func=lambda image_path: detect_objects(image_path),
-            description="useful for when you need to detect objects in an image"
-        ),
-        Tool(
-            name = "ImageGeneration",
-            func=lambda description: generate_image(description, openai_api_key),
-            description="useful for when you need to generate an image from a description"
+            name = "ImageAnalysis",
+            func=lambda image_url: analyze_image(asticaAPI_key, image_url),
+            description="useful for when you need to analyze an image, just translate the result"
         )
     ]
 
@@ -141,20 +105,18 @@ def main():
             message(msg.content, is_user=True)
         else:
             message(msg.content, is_user=False)
-            
 
     uploaded_file = st.file_uploader("Choose an image...", type="jpg")
 
     if uploaded_file is not None:
         image = Image.open(uploaded_file)
         st.image(image, caption='Uploaded Image.', use_column_width=True)
-        caption_response = agent.run(tool="ImageCaption", image=image)
 
-# Object detection
-        detection_response = agent.run(tool="ObjectDetection", image=image)
+        image_url = 'data:image/jpg;base64,' + base64.b64encode(uploaded_file.read()).decode()
 
-        st.write('Caption:', caption_response)
-        st.write('Detected objects:', detection_response)
+        # Image analysis
+        analysis = analyze_image(asticaAPI_key, image_url)
+        st.write('Analysis:', analysis)
 
 if __name__ == '__main__':
     main()
