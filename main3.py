@@ -6,6 +6,62 @@ from langchain.agents import AgentType
 from langchain.chat_models import ChatOpenAI
 from langchain.schema import SystemMessage, HumanMessage, AIMessage
 from langchain.callbacks import StreamlitCallbackHandler
+import requests
+from transformers import Blip2Processor, BlipForConditionalGeneration, DetrImageProcessor, DetrForObjectDetection
+from PIL import Image
+import torch
+from tempfile import NamedTemporaryFile
+from io import BytesIO
+
+def generate_image(description, openai_api_key):
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': f'Bearer {openai_api_key}'
+    }
+
+    data = {
+        "prompts": [description],
+        "max_tokens": 512
+    }
+
+    response = requests.post('https://api.openai.com/v1/images/generations', headers=headers, json=data)
+    image_url = response.json()['image']['url']
+
+    return image_url
+
+def get_image_caption(image):
+    model_name = "Salesforce/blip-image-captioning-large"
+    device = "cpu"  # cuda
+
+    processor = Blip2Processor.from_pretrained(model_name)
+    model = BlipForConditionalGeneration.from_pretrained(model_name).to(device)
+
+    inputs = processor(image, return_tensors='pt').to(device)
+    output = model.generate(**inputs, max_new_tokens=20)
+
+    caption = processor.decode(output[0], skip_special_tokens=True)
+
+    return caption
+
+def detect_objects(image):
+    processor = DetrImageProcessor.from_pretrained("facebook/detr-resnet-50")
+    model = DetrForObjectDetection.from_pretrained("facebook/detr-resnet-50")
+
+    inputs = processor(images=image, return_tensors="pt")
+    outputs = model(**inputs)
+
+    # convert outputs (bounding boxes and class logits) to COCO API
+    # let's only keep detections with score > 0.9
+    target_sizes = torch.tensor([image.size[::-1]])
+    results = processor.post_process_object_detection(outputs, target_sizes=target_sizes, threshold=0.9)[0]
+
+    detections = ""
+    for score, label, box in zip(results["scores"], results["labels"], results["boxes"]):
+        detections += '[{}, {}, {}, {}]'.format(int(box[0]), int(box[1]), int(box[2]), int(box[3]))
+        detections += ' {}'.format(model.config.id2label[int(label)])
+        detections += ' {}\n'.format(float(score))
+
+    return detections
 
 def init():
     st.set_page_config(
@@ -14,6 +70,8 @@ def init():
     )
 
     st.header('SafiraGPT 🤖')
+
+# ... código anterior ...
 
 def main():
     init()
@@ -25,7 +83,7 @@ def main():
         st.stop()
 
     # Crie uma instância do chatbot com o modelo desejado
-    llm = ChatOpenAI(temperature=1, model="gpt-4", openai_api_key=openai_api_key)
+    llm = ChatOpenAI(temperature=1, model="gpt-3.5-turbo-0613", openai_api_key=openai_api_key)
 
     # Crie uma instância do wrapper SerpAPI
     search = SerpAPIWrapper(serpapi_api_key="bfaafdbff929b7fa0ca3eb10ff1287b2c977f7a75725c23fe4f5286eebc5ba46")
@@ -43,6 +101,21 @@ def main():
             name = "Calculator",
             func=llm_math_chain.run,
             description="useful for when you need to answer questions about math"
+        ),
+        Tool(
+            name = "ImageCaption",
+            func=lambda image_path: get_image_caption(image_path),
+            description="useful for when you need to generate a caption for an image"
+        ),
+        Tool(
+            name = "ObjectDetection",
+            func=lambda image_path: detect_objects(image_path),
+            description="useful for when you need to detect objects in an image"
+        ),
+        Tool(
+            name = "ImageGeneration",
+            func=lambda description: generate_image(description, openai_api_key),
+            description="useful for when you need to generate an image from a description"
         )
     ]
 
@@ -68,6 +141,21 @@ def main():
             message(msg.content, is_user=True)
         else:
             message(msg.content, is_user=False)
+
+   uploaded_file = st.file_uploader("Choose an image...", type="jpg")
+
+    if uploaded_file is not None:
+        image = Image.open(uploaded_file)
+        st.image(image, caption='Uploaded Image.', use_column_width=True)
+
+        # Image caption
+        caption_response = agent.run("ImageCaption", image=image)
+
+        # Object detection
+        detection_response = agent.run("ObjectDetection", image=image)
+
+        st.write('Caption:', caption_response)
+        st.write('Detected objects:', detection_response)
 
 if __name__ == '__main__':
     main()
