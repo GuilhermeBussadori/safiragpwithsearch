@@ -3,3 +3,8 @@ streamlit
 streamlit_chat
 openai
 google-search-results
+torch
+tabulate
+timm
+transformers
+pillow
