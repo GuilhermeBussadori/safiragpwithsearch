@@ -142,7 +142,7 @@ def main():
         else:
             message(msg.content, is_user=False)
 
-   uploaded_file = st.file_uploader("Choose an image...", type="jpg")
+    uploaded_file = st.file_uploader("Choose an image...", type="jpg")
 
     if uploaded_file is not None:
         image = Image.open(uploaded_file)
