@@ -1,11 +1,11 @@
 import streamlit as st
 from streamlit_chat import message
-from langchain import LLMMathChain, OpenAI, SerpAPIWrapper
+from langchain import LLMMathChain, OpenAI
 from langchain.agents import initialize_agent, Tool
 from langchain.agents import AgentType
 from langchain.chat_models import ChatOpenAI
 from langchain.schema import SystemMessage, HumanMessage, AIMessage
-from langchain.callbacks import StreamlitCallbackHandler
+from langchain.tools import DuckDuckGoSearchRun
 import requests
 import json
 import base64
@@ -58,16 +58,17 @@ def main():
 
     # Crie uma instância do chatbot com o modelo desejado
     llm = ChatOpenAI(temperature=1, model="gpt-3.5-turbo", openai_api_key=openai_api_key)
-    # Crie uma instância do wrapper SerpAPI
-    search = SerpAPIWrapper(serpapi_api_key="bfaafdbff929b7fa0ca3eb10ff1287b2c977f7a75725c23fe4f5286eebc5ba46")
     
     llm_math_chain = LLMMathChain.from_llm(llm=llm, verbose=True)
+
+    # Crie uma instância do DuckDuckGoSearchRun
+    ddg_search = DuckDuckGoSearchRun()
 
     # Crie as ferramentas que você quer adicionar ao seu chatbot
     tools = [
         Tool(
             name = "Search",
-            func=search.run,
+            func=ddg_search.run,
             description="useful for when you need to answer questions about current events. You should ask targeted questions, and search time"
         ),
         Tool(
