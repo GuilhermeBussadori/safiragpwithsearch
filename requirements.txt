@@ -8,3 +8,4 @@ tabulate
 timm
 transformers
 pillow
+duckduckgo-search
