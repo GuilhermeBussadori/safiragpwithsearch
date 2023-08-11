@@ -69,7 +69,7 @@ def main():
         Tool(
             name = "Search",
             func=ddg_search.run,
-            description="useful for when you need to answer questions about current events. You should ask targeted questions, and search time"
+            description="useful for when you need to answer questions about current events. You should ask targeted questions, and search time, open link and describe, etc."
         ),
         Tool(
             name = "Calculator",
