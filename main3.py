@@ -57,7 +57,7 @@ def main():
         st.stop()
 
     # Crie uma instância do chatbot com o modelo desejado
-    llm = ChatOpenAI(temperature=1, model="gpt-3.5-turbo", openai_api_key=openai_api_key)
+    llm = ChatOpenAI(temperature=1, model="gpt-4", openai_api_key=openai_api_key)
     
     llm_math_chain = LLMMathChain.from_llm(llm=llm, verbose=True)
 
