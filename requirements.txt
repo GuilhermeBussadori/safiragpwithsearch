@@ -9,3 +9,4 @@ timm
 transformers
 pillow
 duckduckgo-search
+numexpr
